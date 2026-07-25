@@ -9,38 +9,131 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as AuthRouteImport } from './routes/auth'
+import { Route as DashboardRouteRouteImport } from './routes/dashboard/route'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ServicoIdRouteImport } from './routes/servico.$id'
+import { Route as DashboardMensagensRouteImport } from './routes/dashboard/mensagens'
+import { Route as DashboardFavoritosRouteImport } from './routes/dashboard/favoritos'
+import { Route as DashboardAnunciosRouteImport } from './routes/dashboard/anuncios'
 
+const AuthRoute = AuthRouteImport.update({
+  id: '/auth',
+  path: '/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DashboardRouteRoute = DashboardRouteRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ServicoIdRoute = ServicoIdRouteImport.update({
+  id: '/servico/$id',
+  path: '/servico/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DashboardMensagensRoute = DashboardMensagensRouteImport.update({
+  id: '/mensagens',
+  path: '/mensagens',
+  getParentRoute: () => DashboardRouteRoute,
+} as any)
+const DashboardFavoritosRoute = DashboardFavoritosRouteImport.update({
+  id: '/favoritos',
+  path: '/favoritos',
+  getParentRoute: () => DashboardRouteRoute,
+} as any)
+const DashboardAnunciosRoute = DashboardAnunciosRouteImport.update({
+  id: '/anuncios',
+  path: '/anuncios',
+  getParentRoute: () => DashboardRouteRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/dashboard': typeof DashboardRouteRouteWithChildren
+  '/auth': typeof AuthRoute
+  '/dashboard/anuncios': typeof DashboardAnunciosRoute
+  '/dashboard/favoritos': typeof DashboardFavoritosRoute
+  '/dashboard/mensagens': typeof DashboardMensagensRoute
+  '/servico/$id': typeof ServicoIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/dashboard': typeof DashboardRouteRouteWithChildren
+  '/auth': typeof AuthRoute
+  '/dashboard/anuncios': typeof DashboardAnunciosRoute
+  '/dashboard/favoritos': typeof DashboardFavoritosRoute
+  '/dashboard/mensagens': typeof DashboardMensagensRoute
+  '/servico/$id': typeof ServicoIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/dashboard': typeof DashboardRouteRouteWithChildren
+  '/auth': typeof AuthRoute
+  '/dashboard/anuncios': typeof DashboardAnunciosRoute
+  '/dashboard/favoritos': typeof DashboardFavoritosRoute
+  '/dashboard/mensagens': typeof DashboardMensagensRoute
+  '/servico/$id': typeof ServicoIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/dashboard'
+    | '/auth'
+    | '/dashboard/anuncios'
+    | '/dashboard/favoritos'
+    | '/dashboard/mensagens'
+    | '/servico/$id'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/dashboard'
+    | '/auth'
+    | '/dashboard/anuncios'
+    | '/dashboard/favoritos'
+    | '/dashboard/mensagens'
+    | '/servico/$id'
+  id:
+    | '__root__'
+    | '/'
+    | '/dashboard'
+    | '/auth'
+    | '/dashboard/anuncios'
+    | '/dashboard/favoritos'
+    | '/dashboard/mensagens'
+    | '/servico/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  DashboardRouteRoute: typeof DashboardRouteRouteWithChildren
+  AuthRoute: typeof AuthRoute
+  ServicoIdRoute: typeof ServicoIdRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/auth': {
+      id: '/auth'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dashboard': {
+      id: '/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof DashboardRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -48,22 +141,59 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/servico/$id': {
+      id: '/servico/$id'
+      path: '/servico/$id'
+      fullPath: '/servico/$id'
+      preLoaderRoute: typeof ServicoIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dashboard/mensagens': {
+      id: '/dashboard/mensagens'
+      path: '/mensagens'
+      fullPath: '/dashboard/mensagens'
+      preLoaderRoute: typeof DashboardMensagensRouteImport
+      parentRoute: typeof DashboardRouteRoute
+    }
+    '/dashboard/favoritos': {
+      id: '/dashboard/favoritos'
+      path: '/favoritos'
+      fullPath: '/dashboard/favoritos'
+      preLoaderRoute: typeof DashboardFavoritosRouteImport
+      parentRoute: typeof DashboardRouteRoute
+    }
+    '/dashboard/anuncios': {
+      id: '/dashboard/anuncios'
+      path: '/anuncios'
+      fullPath: '/dashboard/anuncios'
+      preLoaderRoute: typeof DashboardAnunciosRouteImport
+      parentRoute: typeof DashboardRouteRoute
+    }
   }
 }
 
+interface DashboardRouteRouteChildren {
+  DashboardAnunciosRoute: typeof DashboardAnunciosRoute
+  DashboardFavoritosRoute: typeof DashboardFavoritosRoute
+  DashboardMensagensRoute: typeof DashboardMensagensRoute
+}
+
+const DashboardRouteRouteChildren: DashboardRouteRouteChildren = {
+  DashboardAnunciosRoute: DashboardAnunciosRoute,
+  DashboardFavoritosRoute: DashboardFavoritosRoute,
+  DashboardMensagensRoute: DashboardMensagensRoute,
+}
+
+const DashboardRouteRouteWithChildren = DashboardRouteRoute._addFileChildren(
+  DashboardRouteRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  DashboardRouteRoute: DashboardRouteRouteWithChildren,
+  AuthRoute: AuthRoute,
+  ServicoIdRoute: ServicoIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
