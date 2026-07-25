@@ -109,7 +109,7 @@ function ServiceDetailPage() {
   const fotos = servico.fotos ?? [];
   const iniciais = (prestador?.nome ?? "?")
     .split(" ")
-    .map((s) => s[0])
+    .map((s: string) => s[0])
     .slice(0, 2)
     .join("")
     .toUpperCase();
@@ -145,7 +145,7 @@ function ServiceDetailPage() {
               </div>
               {fotos.length > 1 && (
                 <div className="flex gap-2 overflow-x-auto p-3">
-                  {fotos.map((f, i) => (
+                  {fotos.map((f: string, i: number) => (
                     <button
                       key={i}
                       onClick={() => setFotoAtiva(i)}
