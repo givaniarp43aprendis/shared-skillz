@@ -14,7 +14,7 @@ const brl = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" 
 export function ServiceCard({ servico }: ServiceCardProps) {
   const iniciais = (servico.prestador_nome ?? "?")
     .split(" ")
-    .map((s) => s[0])
+    .map((s: string) => s[0])
     .slice(0, 2)
     .join("")
     .toUpperCase();
