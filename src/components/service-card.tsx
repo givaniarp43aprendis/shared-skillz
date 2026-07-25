@@ -3,7 +3,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { StarRating } from "@/components/star-rating";
-import type { ServicoDestaque } from "@/integrations/supabase/types";
+import type { ServicoDestaque } from "@/lib/vi-types";
 
 interface ServiceCardProps {
   servico: ServicoDestaque;

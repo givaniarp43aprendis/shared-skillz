@@ -4,7 +4,7 @@ import { Card } from "@/components/ui/card";
 import { ServiceCard } from "@/components/service-card";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
-import type { ServicoDestaque } from "@/integrations/supabase/types";
+import type { ServicoDestaque } from "@/lib/vi-types";
 
 export const Route = createFileRoute("/dashboard/favoritos")({
   component: FavoritosPage,

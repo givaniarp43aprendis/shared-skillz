@@ -8,7 +8,7 @@ import { Card } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
-import type { Mensagem } from "@/integrations/supabase/types";
+import type { Mensagem } from "@/lib/vi-types";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/dashboard/mensagens")({

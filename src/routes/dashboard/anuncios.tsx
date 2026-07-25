@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
-import type { Servico } from "@/integrations/supabase/types";
+import type { Servico } from "@/lib/vi-types";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/dashboard/anuncios")({
