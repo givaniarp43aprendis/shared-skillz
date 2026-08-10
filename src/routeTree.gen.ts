@@ -13,6 +13,7 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as DashboardRouteRouteImport } from './routes/dashboard/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ServicoIdRouteImport } from './routes/servico.$id'
+import { Route as DashboardPerfilRouteImport } from './routes/dashboard/perfil'
 import { Route as DashboardAnunciosRouteImport } from './routes/dashboard/anuncios'
 
 const AuthRoute = AuthRouteImport.update({
@@ -35,6 +36,11 @@ const ServicoIdRoute = ServicoIdRouteImport.update({
   path: '/servico/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DashboardPerfilRoute = DashboardPerfilRouteImport.update({
+  id: '/perfil',
+  path: '/perfil',
+  getParentRoute: () => DashboardRouteRoute,
+} as any)
 const DashboardAnunciosRoute = DashboardAnunciosRouteImport.update({
   id: '/anuncios',
   path: '/anuncios',
@@ -46,6 +52,7 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof DashboardRouteRouteWithChildren
   '/auth': typeof AuthRoute
   '/dashboard/anuncios': typeof DashboardAnunciosRoute
+  '/dashboard/perfil': typeof DashboardPerfilRoute
   '/servico/$id': typeof ServicoIdRoute
 }
 export interface FileRoutesByTo {
@@ -53,6 +60,7 @@ export interface FileRoutesByTo {
   '/dashboard': typeof DashboardRouteRouteWithChildren
   '/auth': typeof AuthRoute
   '/dashboard/anuncios': typeof DashboardAnunciosRoute
+  '/dashboard/perfil': typeof DashboardPerfilRoute
   '/servico/$id': typeof ServicoIdRoute
 }
 export interface FileRoutesById {
@@ -61,6 +69,7 @@ export interface FileRoutesById {
   '/dashboard': typeof DashboardRouteRouteWithChildren
   '/auth': typeof AuthRoute
   '/dashboard/anuncios': typeof DashboardAnunciosRoute
+  '/dashboard/perfil': typeof DashboardPerfilRoute
   '/servico/$id': typeof ServicoIdRoute
 }
 export interface FileRouteTypes {
@@ -70,15 +79,23 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/auth'
     | '/dashboard/anuncios'
+    | '/dashboard/perfil'
     | '/servico/$id'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/dashboard' | '/auth' | '/dashboard/anuncios' | '/servico/$id'
+  to:
+    | '/'
+    | '/dashboard'
+    | '/auth'
+    | '/dashboard/anuncios'
+    | '/dashboard/perfil'
+    | '/servico/$id'
   id:
     | '__root__'
     | '/'
     | '/dashboard'
     | '/auth'
     | '/dashboard/anuncios'
+    | '/dashboard/perfil'
     | '/servico/$id'
   fileRoutesById: FileRoutesById
 }
@@ -119,6 +136,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ServicoIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/dashboard/perfil': {
+      id: '/dashboard/perfil'
+      path: '/perfil'
+      fullPath: '/dashboard/perfil'
+      preLoaderRoute: typeof DashboardPerfilRouteImport
+      parentRoute: typeof DashboardRouteRoute
+    }
     '/dashboard/anuncios': {
       id: '/dashboard/anuncios'
       path: '/anuncios'
@@ -131,10 +155,12 @@ declare module '@tanstack/react-router' {
 
 interface DashboardRouteRouteChildren {
   DashboardAnunciosRoute: typeof DashboardAnunciosRoute
+  DashboardPerfilRoute: typeof DashboardPerfilRoute
 }
 
 const DashboardRouteRouteChildren: DashboardRouteRouteChildren = {
   DashboardAnunciosRoute: DashboardAnunciosRoute,
+  DashboardPerfilRoute: DashboardPerfilRoute,
 }
 
 const DashboardRouteRouteWithChildren = DashboardRouteRoute._addFileChildren(
