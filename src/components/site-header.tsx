@@ -1,5 +1,5 @@
 import { Link, useNavigate } from "@tanstack/react-router";
-import { Home, LogOut, MessageCircle, PlusCircle, User as UserIcon } from "lucide-react";
+import { Home, LogOut, PlusCircle, User as UserIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
