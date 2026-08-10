@@ -20,7 +20,7 @@ import type { Service } from "@/lib/vi-types";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/dashboard/anuncios")({
-  component: MeusAnuncios;
+  component: MeusAnuncios,
 });
 
 const VAZIO = {
