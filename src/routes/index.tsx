@@ -9,23 +9,23 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { SiteHeader } from "@/components/site-header";
 import { ServiceCard } from "@/components/service-card";
 import { supabase } from "@/integrations/supabase/client";
-import type { ServicoDestaque } from "@/lib/vi-types";
+import { toServiceWithStats, type ServiceRow, type ServiceWithStats } from "@/lib/vi-types";
 
 const CATEGORIAS = ["Reformas", "Aulas", "Culinária", "Beleza", "Pets", "Limpeza"];
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Vizinho Indica — Serviços de confiança no seu condomínio" },
+      { title: "Vizinho Indica — Serviços de confiança no seu bairro" },
       {
         name: "description",
         content:
-          "Marketplace comunitário para encontrar prestadores de serviço avaliados por vizinhos do seu condomínio.",
+          "Marketplace comunitário para encontrar prestadores de serviço avaliados por vizinhos do seu bairro.",
       },
       { property: "og:title", content: "Vizinho Indica" },
       {
         property: "og:description",
-        content: "Encontre profissionais de confiança no seu condomínio.",
+        content: "Encontre profissionais de confiança no seu bairro.",
       },
       { property: "og:type", content: "website" },
     ],
@@ -33,13 +33,14 @@ export const Route = createFileRoute("/")({
   component: HomePage,
 });
 
-async function fetchDestaques(): Promise<ServicoDestaque[]> {
+async function fetchServicos(): Promise<ServiceWithStats[]> {
   const { data, error } = await supabase
-    .from("v_servicos_destaque")
-    .select("*")
-    .limit(24);
+    .from("services")
+    .select("*, profiles(name, avatar_url, neighborhood), reviews(rating)")
+    .order("created_at", { ascending: false })
+    .limit(48);
   if (error) throw error;
-  return (data ?? []) as ServicoDestaque[];
+  return ((data ?? []) as unknown as ServiceRow[]).map(toServiceWithStats);
 }
 
 function HomePage() {
@@ -47,16 +48,16 @@ function HomePage() {
   const [categoria, setCategoria] = useState<string | null>(null);
 
   const { data: servicos, isLoading, error } = useQuery({
-    queryKey: ["v_servicos_destaque"],
-    queryFn: fetchDestaques,
+    queryKey: ["services"],
+    queryFn: fetchServicos,
   });
 
   const filtrados = (servicos ?? []).filter((s) => {
     const okBusca = busca
-      ? s.titulo.toLowerCase().includes(busca.toLowerCase()) ||
-        (s.categoria ?? "").toLowerCase().includes(busca.toLowerCase())
+      ? s.title.toLowerCase().includes(busca.toLowerCase()) ||
+        (s.category ?? "").toLowerCase().includes(busca.toLowerCase())
       : true;
-    const okCat = categoria ? s.categoria === categoria : true;
+    const okCat = categoria ? s.category === categoria : true;
     return okBusca && okCat;
   });
 
@@ -72,7 +73,7 @@ function HomePage() {
             Comunidade verificada
           </Badge>
           <h1 className="text-balance text-4xl font-bold leading-tight tracking-tight text-white sm:text-5xl lg:text-6xl">
-            Encontre profissionais de confiança no seu condomínio
+            Encontre profissionais de confiança no seu bairro
           </h1>
           <p className="mx-auto mt-4 max-w-2xl text-balance text-base text-white/85 sm:text-lg">
             Serviços indicados e avaliados por vizinhos de verdade.
@@ -127,15 +128,14 @@ function HomePage() {
           <div>
             <h2 className="text-2xl font-bold text-foreground">Destaques da vizinhança</h2>
             <p className="text-sm text-muted-foreground">
-              Serviços mais bem avaliados pelos vizinhos
+              Serviços publicados e avaliados pelos vizinhos
             </p>
           </div>
         </div>
 
         {error && (
           <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
-            Não foi possível carregar os serviços. Verifique se a view{" "}
-            <code>v_servicos_destaque</code> está acessível pela Data API.
+            Não foi possível carregar os serviços. Tente novamente em instantes.
           </div>
         )}
 

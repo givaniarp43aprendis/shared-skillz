@@ -1,43 +1,53 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { Heart, MessageCircle, ArrowLeft } from "lucide-react";
+import { ArrowLeft, Phone, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
+import { Textarea } from "@/components/ui/textarea";
 import { SiteHeader } from "@/components/site-header";
 import { StarRating } from "@/components/star-rating";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
+import type { Profile, Review, ReviewWithAuthor, Service } from "@/lib/vi-types";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/servico/$id")({
-  head: ({ params }) => ({
+  head: () => ({
     meta: [
-      { title: `Serviço #${params.id} — Vizinho Indica` },
-      { name: "description", content: "Detalhes do serviço no Vizinho Indica." },
+      { title: "Detalhes do serviço — Vizinho Indica" },
+      {
+        name: "description",
+        content: "Veja detalhes, avaliações e contato do serviço oferecido por um vizinho.",
+      },
+      { property: "og:title", content: "Detalhes do serviço — Vizinho Indica" },
+      {
+        property: "og:description",
+        content: "Veja detalhes, avaliações e contato do serviço oferecido por um vizinho.",
+      },
+      { property: "og:type", content: "article" },
     ],
   }),
   component: ServiceDetailPage,
 });
 
-const brl = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
-
 function ServiceDetailPage() {
-  const { id } = Route.useParams();
-  const servicoId = Number(id);
+  const { id: servicoId } = Route.useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [fotoAtiva, setFotoAtiva] = useState(0);
+  const qc = useQueryClient();
+  const [nota, setNota] = useState(5);
+  const [comentario, setComentario] = useState("");
 
   const { data, isLoading } = useQuery({
-    queryKey: ["servico", servicoId],
+    queryKey: ["service", servicoId],
     queryFn: async () => {
       const { data: servico, error } = await supabase
-        .from("servicos")
+        .from("services")
         .select("*")
         .eq("id", servicoId)
         .maybeSingle();
@@ -45,40 +55,55 @@ function ServiceDetailPage() {
       if (!servico) return null;
 
       const [{ data: prestador }, { data: avaliacoes }] = await Promise.all([
-        supabase.from("profiles").select("*").eq("id", servico.user_id).maybeSingle(),
         supabase
-          .from("avaliacoes")
+          .from("profiles")
           .select("*")
-          .eq("servico_id", servicoId)
+          .eq("id", (servico as Service).user_id)
+          .maybeSingle(),
+        supabase
+          .from("reviews")
+          .select("*, profiles(name, avatar_url)")
+          .eq("service_id", servicoId)
           .order("created_at", { ascending: false }),
       ]);
 
-      const notas = (avaliacoes ?? []).map((a) => a.nota);
+      const reviews = (avaliacoes ?? []) as unknown as ReviewWithAuthor[];
+      const notas = reviews.map((a) => a.rating);
       const media = notas.length ? notas.reduce((a, b) => a + b, 0) / notas.length : 0;
-      return { servico, prestador, avaliacoes: avaliacoes ?? [], media, total: notas.length };
+      return {
+        servico: servico as unknown as Service,
+        prestador: (prestador ?? null) as Profile | null,
+        avaliacoes: reviews,
+        media,
+        total: notas.length,
+      };
     },
   });
 
-  const handleChat = async () => {
-    if (!user) {
-      navigate({ to: "/auth" });
-      return;
-    }
-    if (!data?.servico) return;
-    navigate({
-      to: "/dashboard/mensagens",
-      search: { com: data.servico.user_id, servico: servicoId } as never,
-    });
-  };
-
-  const handleFavoritar = async () => {
-    if (!user) return navigate({ to: "/auth" });
-    const { error } = await supabase
-      .from("favoritos")
-      .insert({ user_id: user.id, servico_id: servicoId });
-    if (error) toast.error("Não foi possível favoritar");
-    else toast.success("Adicionado aos favoritos");
-  };
+  const avaliar = useMutation({
+    mutationFn: async () => {
+      if (!user) throw new Error("Não autenticado");
+      const { error } = await supabase.from("reviews").insert({
+        service_id: servicoId,
+        user_id: user.id,
+        rating: nota,
+        comment: comentario || null,
+      } as never);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Avaliação enviada!");
+      setComentario("");
+      setNota(5);
+      qc.invalidateQueries({ queryKey: ["service", servicoId] });
+    },
+    onError: (e: Error) =>
+      toast.error(
+        e.message.includes("duplicate")
+          ? "Você já avaliou este serviço."
+          : "Não foi possível enviar sua avaliação.",
+      ),
+  });
 
   if (isLoading) {
     return (
@@ -106,13 +131,13 @@ function ServiceDetailPage() {
   }
 
   const { servico, prestador, avaliacoes, media, total } = data;
-  const fotos = servico.fotos ?? [];
-  const iniciais = (prestador?.nome ?? "?")
+  const iniciais = (prestador?.name ?? "?")
     .split(" ")
     .map((s: string) => s[0])
     .slice(0, 2)
     .join("")
     .toUpperCase();
+  const jaAvaliou = !!user && avaliacoes.some((a: Review) => a.user_id === user.id);
 
   return (
     <div className="min-h-screen bg-background">
@@ -131,10 +156,10 @@ function ServiceDetailPage() {
           <div className="space-y-6">
             <div className="overflow-hidden rounded-2xl bg-card shadow-card">
               <div className="relative aspect-video bg-muted">
-                {fotos[fotoAtiva] ? (
+                {servico.image_url ? (
                   <img
-                    src={fotos[fotoAtiva]}
-                    alt={servico.titulo}
+                    src={servico.image_url}
+                    alt={servico.title}
                     className="h-full w-full object-cover"
                   />
                 ) : (
@@ -143,45 +168,25 @@ function ServiceDetailPage() {
                   </div>
                 )}
               </div>
-              {fotos.length > 1 && (
-                <div className="flex gap-2 overflow-x-auto p-3">
-                  {fotos.map((f: string, i: number) => (
-                    <button
-                      key={i}
-                      onClick={() => setFotoAtiva(i)}
-                      className={`h-16 w-20 shrink-0 overflow-hidden rounded-md border-2 ${
-                        fotoAtiva === i ? "border-primary" : "border-transparent"
-                      }`}
-                    >
-                      <img src={f} alt="" className="h-full w-full object-cover" />
-                    </button>
-                  ))}
-                </div>
-              )}
             </div>
 
             <div>
-              {servico.categoria && (
+              {servico.category && (
                 <Badge variant="secondary" className="mb-3">
-                  {servico.categoria}
+                  {servico.category}
                 </Badge>
               )}
               <h1 className="text-3xl font-bold tracking-tight text-foreground">
-                {servico.titulo}
+                {servico.title}
               </h1>
               <div className="mt-3 flex items-center gap-4">
                 <StarRating value={media} total={total} size="lg" />
-                {servico.preco != null && (
-                  <span className="text-xl font-bold text-primary">
-                    {brl.format(servico.preco)}
-                  </span>
-                )}
               </div>
               <Separator className="my-6" />
               <div className="prose prose-slate max-w-none">
                 <h2 className="mb-2 text-lg font-semibold">Descrição</h2>
                 <p className="whitespace-pre-line leading-relaxed text-muted-foreground">
-                  {servico.descricao ?? "Sem descrição."}
+                  {servico.description ?? "Sem descrição."}
                 </p>
               </div>
             </div>
@@ -191,6 +196,62 @@ function ServiceDetailPage() {
               <h2 className="mb-4 text-lg font-semibold">
                 Avaliações {total > 0 && <span className="text-muted-foreground">({total})</span>}
               </h2>
+
+              {user && !jaAvaliou && servico.user_id !== user.id && (
+                <Card className="mb-4 p-4">
+                  <form
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      avaliar.mutate();
+                    }}
+                    className="space-y-3"
+                  >
+                    <div className="flex items-center gap-1">
+                      {[1, 2, 3, 4, 5].map((n) => (
+                        <button
+                          key={n}
+                          type="button"
+                          onClick={() => setNota(n)}
+                          aria-label={`${n} estrelas`}
+                        >
+                          <Star
+                            className={`h-6 w-6 ${
+                              n <= nota
+                                ? "fill-[var(--star)] text-[var(--star)]"
+                                : "text-muted-foreground"
+                            }`}
+                          />
+                        </button>
+                      ))}
+                    </div>
+                    <Textarea
+                      rows={3}
+                      value={comentario}
+                      onChange={(e) => setComentario(e.target.value)}
+                      placeholder="Conte como foi sua experiência com este vizinho..."
+                    />
+                    <Button
+                      type="submit"
+                      disabled={avaliar.isPending}
+                      className="bg-gradient-hero text-white hover:opacity-90"
+                    >
+                      {avaliar.isPending ? "Enviando..." : "Enviar avaliação"}
+                    </Button>
+                  </form>
+                </Card>
+              )}
+
+              {!user && (
+                <Card className="mb-4 flex items-center justify-between gap-3 p-4">
+                  <p className="text-sm text-muted-foreground">
+                    Entre na sua conta para avaliar este serviço.
+                  </p>
+                  <Button variant="outline" onClick={() => navigate({ to: "/auth" })}>
+                    Entrar
+                  </Button>
+                </Card>
+              )}
+
               {avaliacoes.length === 0 ? (
                 <Card className="p-6 text-center text-sm text-muted-foreground">
                   Ainda não há avaliações.
@@ -202,14 +263,19 @@ function ServiceDetailPage() {
                       <div className="mb-2 flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           <Avatar className="h-8 w-8">
-                            <AvatarFallback className="text-xs">V</AvatarFallback>
+                            <AvatarImage src={av.profiles?.avatar_url ?? undefined} />
+                            <AvatarFallback className="text-xs">
+                              {(av.profiles?.name ?? "V").slice(0, 1).toUpperCase()}
+                            </AvatarFallback>
                           </Avatar>
-                          <span className="text-sm font-medium">Vizinho</span>
+                          <span className="text-sm font-medium">
+                            {av.profiles?.name ?? "Vizinho"}
+                          </span>
                         </div>
-                        <StarRating value={av.nota} showNumber={false} size="sm" />
+                        <StarRating value={av.rating} showNumber={false} size="sm" />
                       </div>
-                      {av.comentario && (
-                        <p className="text-sm text-muted-foreground">{av.comentario}</p>
+                      {av.comment && (
+                        <p className="text-sm text-muted-foreground">{av.comment}</p>
                       )}
                     </Card>
                   ))}
@@ -230,37 +296,33 @@ function ServiceDetailPage() {
                 </Avatar>
                 <div className="min-w-0">
                   <div className="truncate font-semibold text-foreground">
-                    {prestador?.nome ?? "Vizinho"}
+                    {prestador?.name ?? "Vizinho"}
                   </div>
-                  {prestador?.condominio && (
+                  {prestador?.neighborhood && (
                     <div className="truncate text-xs text-muted-foreground">
-                      {prestador.condominio}
+                      {prestador.neighborhood}
                     </div>
                   )}
                 </div>
               </div>
-              {prestador?.bio && (
-                <p className="mt-3 text-sm text-muted-foreground">{prestador.bio}</p>
-              )}
               <Separator className="my-4" />
               <div className="space-y-2">
-                <Button
-                  onClick={handleChat}
-                  className="w-full bg-gradient-hero text-white hover:opacity-90"
-                  size="lg"
-                >
-                  <MessageCircle className="mr-2 h-4 w-4" />
-                  Chamar no Chat
-                </Button>
-                <Button
-                  onClick={handleFavoritar}
-                  variant="outline"
-                  className="w-full"
-                  size="lg"
-                >
-                  <Heart className="mr-2 h-4 w-4" />
-                  Favoritar
-                </Button>
+                {servico.phone ? (
+                  <Button
+                    asChild
+                    className="w-full bg-gradient-hero text-white hover:opacity-90"
+                    size="lg"
+                  >
+                    <a href={`tel:${servico.phone}`}>
+                      <Phone className="mr-2 h-4 w-4" />
+                      {servico.phone}
+                    </a>
+                  </Button>
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    Este vizinho não informou telefone de contato.
+                  </p>
+                )}
               </div>
             </Card>
           </aside>
