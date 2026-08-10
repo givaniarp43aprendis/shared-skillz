@@ -1,62 +1,59 @@
-// Tipos manuais para as tabelas do Supabase externo do Vizinho Indica.
-// IDs de serviços/avaliações/mensagens/favoritos são int8 (number).
+// Tipos do domínio do Vizinho Indica (schema: profiles, services, reviews).
 
 export interface Profile {
   id: string;
-  nome: string | null;
+  name: string | null;
+  neighborhood: string | null;
   avatar_url: string | null;
-  bio: string | null;
-  condominio: string | null;
   created_at: string;
 }
 
-export interface Servico {
-  id: number;
+export interface Service {
+  id: string;
   user_id: string;
-  titulo: string;
-  descricao: string | null;
-  categoria: string | null;
-  preco: number | null;
-  fotos: string[] | null;
-  ativo: boolean;
+  title: string;
+  description: string | null;
+  category: string | null;
+  phone: string | null;
+  image_url: string | null;
   created_at: string;
 }
 
-export interface ServicoDestaque {
-  id: number;
-  titulo: string;
-  categoria: string | null;
-  preco: number | null;
-  foto: string | null;
+export interface Review {
+  id: string;
+  service_id: string;
   user_id: string;
-  prestador_nome: string | null;
-  prestador_avatar: string | null;
-  nota_media: number | null;
-  total_avaliacoes: number | null;
-}
-
-export interface Avaliacao {
-  id: number;
-  servico_id: number;
-  user_id: string;
-  nota: number;
-  comentario: string | null;
+  rating: number;
+  comment: string | null;
   created_at: string;
 }
 
-export interface Mensagem {
-  id: number;
-  remetente_id: string;
-  destinatario_id: string;
-  servico_id: number | null;
-  conteudo: string;
-  lida: boolean;
-  created_at: string;
+export interface ReviewWithAuthor extends Review {
+  profiles: Pick<Profile, "name" | "avatar_url"> | null;
 }
 
-export interface Favorito {
-  id: number;
-  user_id: string;
-  servico_id: number;
-  created_at: string;
+export interface ServiceWithStats extends Service {
+  provider_name: string | null;
+  provider_avatar: string | null;
+  provider_neighborhood: string | null;
+  rating_avg: number;
+  rating_count: number;
+}
+
+export type ServiceRow = Service & {
+  profiles: Pick<Profile, "name" | "avatar_url" | "neighborhood"> | null;
+  reviews: { rating: number }[] | null;
+};
+
+export function toServiceWithStats(row: ServiceRow): ServiceWithStats {
+  const ratings = (row.reviews ?? []).map((r) => r.rating);
+  const avg = ratings.length ? ratings.reduce((a, b) => a + b, 0) / ratings.length : 0;
+  return {
+    ...row,
+    provider_name: row.profiles?.name ?? null,
+    provider_avatar: row.profiles?.avatar_url ?? null,
+    provider_neighborhood: row.profiles?.neighborhood ?? null,
+    rating_avg: avg,
+    rating_count: ratings.length,
+  };
 }

@@ -1,6 +1,6 @@
 import { createFileRoute, Link, Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useEffect } from "react";
-import { Heart, MessageCircle, PackageOpen } from "lucide-react";
+import { PackageOpen, UserRound } from "lucide-react";
 import { SiteHeader } from "@/components/site-header";
 import { useAuth } from "@/hooks/use-auth";
 import { cn } from "@/lib/utils";
@@ -11,9 +11,9 @@ export const Route = createFileRoute("/dashboard")({
 
 const NAV = [
   { to: "/dashboard/anuncios", label: "Meus anúncios", icon: PackageOpen },
-  { to: "/dashboard/favoritos", label: "Favoritos", icon: Heart },
-  { to: "/dashboard/mensagens", label: "Mensagens", icon: MessageCircle },
+  { to: "/dashboard/perfil", label: "Meu perfil", icon: UserRound },
 ] as const;
+
 
 function DashboardLayout() {
   const { user, loading } = useAuth();

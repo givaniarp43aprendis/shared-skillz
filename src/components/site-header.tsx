@@ -1,5 +1,5 @@
 import { Link, useNavigate } from "@tanstack/react-router";
-import { Home, LogOut, MessageCircle, PlusCircle, User as UserIcon } from "lucide-react";
+import { Home, LogOut, PlusCircle, User as UserIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -53,11 +53,12 @@ export function SiteHeader() {
                 Meus anúncios
               </Link>
               <Link
-                to="/dashboard/mensagens"
+                to="/dashboard/perfil"
                 className="rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
               >
-                Mensagens
+                Meu perfil
               </Link>
+
             </>
           )}
         </nav>
@@ -94,10 +95,11 @@ export function SiteHeader() {
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
-                    <Link to="/dashboard/mensagens">
-                      <MessageCircle className="mr-2 h-4 w-4" /> Mensagens
+                    <Link to="/dashboard/perfil">
+                      <UserIcon className="mr-2 h-4 w-4" /> Meu perfil
                     </Link>
                   </DropdownMenuItem>
+
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={handleSignOut}>
                     <LogOut className="mr-2 h-4 w-4" /> Sair

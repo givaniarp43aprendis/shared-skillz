@@ -7,79 +7,115 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
   DialogFooter,
 } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
-import type { Servico } from "@/lib/vi-types";
+import type { Service } from "@/lib/vi-types";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/dashboard/anuncios")({
   component: MeusAnuncios,
 });
 
-const brl = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
+const VAZIO = {
+  title: "",
+  description: "",
+  category: "",
+  phone: "",
+  image_url: "",
+};
 
 function MeusAnuncios() {
   const { user } = useAuth();
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState({ titulo: "", descricao: "", categoria: "", preco: "" });
+  const [editandoId, setEditandoId] = useState<string | null>(null);
+  const [form, setForm] = useState(VAZIO);
 
   const { data: anuncios, isLoading } = useQuery({
     queryKey: ["meus-servicos", user?.id],
     queryFn: async () => {
       if (!user) return [];
       const { data, error } = await supabase
-        .from("servicos")
+        .from("services")
         .select("*")
         .eq("user_id", user.id)
         .order("created_at", { ascending: false });
       if (error) throw error;
-      return (data ?? []) as Servico[];
+      return (data ?? []) as unknown as Service[];
     },
     enabled: !!user,
   });
 
-  const criar = useMutation({
+  const abrirNovo = () => {
+    setEditandoId(null);
+    setForm(VAZIO);
+    setOpen(true);
+  };
+
+  const abrirEdicao = (s: Service) => {
+    setEditandoId(s.id);
+    setForm({
+      title: s.title,
+      description: s.description ?? "",
+      category: s.category ?? "",
+      phone: s.phone ?? "",
+      image_url: s.image_url ?? "",
+    });
+    setOpen(true);
+  };
+
+  const salvar = useMutation({
     mutationFn: async () => {
       if (!user) throw new Error("Não autenticado");
-      const { error } = await supabase.from("servicos").insert({
-        user_id: user.id,
-        titulo: form.titulo,
-        descricao: form.descricao,
-        categoria: form.categoria || null,
-        preco: form.preco ? Number(form.preco) : null,
-        ativo: true,
-      });
-      if (error) throw error;
+      const payload = {
+        title: form.title,
+        description: form.description || null,
+        category: form.category || null,
+        phone: form.phone || null,
+        image_url: form.image_url || null,
+      };
+      if (editandoId) {
+        const { error } = await supabase
+          .from("services")
+          .update(payload as never)
+          .eq("id", editandoId);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from("services")
+          .insert({ ...payload, user_id: user.id } as never);
+        if (error) throw error;
+      }
     },
     onSuccess: () => {
-      toast.success("Anúncio criado!");
+      toast.success(editandoId ? "Anúncio atualizado!" : "Anúncio criado!");
       setOpen(false);
-      setForm({ titulo: "", descricao: "", categoria: "", preco: "" });
+      setEditandoId(null);
+      setForm(VAZIO);
       qc.invalidateQueries({ queryKey: ["meus-servicos"] });
+      qc.invalidateQueries({ queryKey: ["services"] });
     },
-    onError: (e) => toast.error(e.message),
+    onError: (e: Error) => toast.error(e.message),
   });
 
   const excluir = useMutation({
-    mutationFn: async (id: number) => {
-      const { error } = await supabase.from("servicos").delete().eq("id", id);
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("services").delete().eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {
       toast.success("Anúncio excluído");
       qc.invalidateQueries({ queryKey: ["meus-servicos"] });
+      qc.invalidateQueries({ queryKey: ["services"] });
     },
-    onError: (e) => toast.error(e.message),
+    onError: (e: Error) => toast.error(e.message),
   });
 
   return (
@@ -91,20 +127,18 @@ function MeusAnuncios() {
             Gerencie os serviços que você oferece
           </p>
         </div>
+        <Button onClick={abrirNovo} className="bg-gradient-hero text-white hover:opacity-90">
+          <Plus className="mr-1.5 h-4 w-4" /> Novo anúncio
+        </Button>
         <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild>
-            <Button className="bg-gradient-hero text-white hover:opacity-90">
-              <Plus className="mr-1.5 h-4 w-4" /> Novo anúncio
-            </Button>
-          </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Criar novo anúncio</DialogTitle>
+              <DialogTitle>{editandoId ? "Editar anúncio" : "Criar novo anúncio"}</DialogTitle>
             </DialogHeader>
             <form
               onSubmit={(e) => {
                 e.preventDefault();
-                criar.mutate();
+                salvar.mutate();
               }}
               className="space-y-4"
             >
@@ -112,44 +146,51 @@ function MeusAnuncios() {
                 <Label>Título</Label>
                 <Input
                   required
-                  value={form.titulo}
-                  onChange={(e) => setForm({ ...form, titulo: e.target.value })}
+                  value={form.title}
+                  onChange={(e) => setForm({ ...form, title: e.target.value })}
                 />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-2">
                   <Label>Categoria</Label>
                   <Input
-                    value={form.categoria}
-                    onChange={(e) => setForm({ ...form, categoria: e.target.value })}
+                    value={form.category}
+                    onChange={(e) => setForm({ ...form, category: e.target.value })}
                     placeholder="Reformas, Aulas..."
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>Preço (R$)</Label>
+                  <Label>Telefone</Label>
                   <Input
-                    type="number"
-                    step="0.01"
-                    value={form.preco}
-                    onChange={(e) => setForm({ ...form, preco: e.target.value })}
+                    value={form.phone}
+                    onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                    placeholder="(11) 90000-0000"
                   />
                 </div>
+              </div>
+              <div className="space-y-2">
+                <Label>URL da imagem</Label>
+                <Input
+                  value={form.image_url}
+                  onChange={(e) => setForm({ ...form, image_url: e.target.value })}
+                  placeholder="https://..."
+                />
               </div>
               <div className="space-y-2">
                 <Label>Descrição</Label>
                 <Textarea
                   rows={4}
-                  value={form.descricao}
-                  onChange={(e) => setForm({ ...form, descricao: e.target.value })}
+                  value={form.description}
+                  onChange={(e) => setForm({ ...form, description: e.target.value })}
                 />
               </div>
               <DialogFooter>
                 <Button
                   type="submit"
-                  disabled={criar.isPending}
+                  disabled={salvar.isPending}
                   className="bg-gradient-hero text-white"
                 >
-                  {criar.isPending ? "Salvando..." : "Publicar"}
+                  {salvar.isPending ? "Salvando..." : editandoId ? "Salvar" : "Publicar"}
                 </Button>
               </DialogFooter>
             </form>
@@ -169,8 +210,8 @@ function MeusAnuncios() {
             <Card key={a.id} className="flex items-center justify-between gap-4 p-4">
               <div className="flex min-w-0 items-center gap-4">
                 <div className="h-16 w-24 shrink-0 overflow-hidden rounded-md bg-muted">
-                  {a.fotos?.[0] && (
-                    <img src={a.fotos[0]} alt="" className="h-full w-full object-cover" />
+                  {a.image_url && (
+                    <img src={a.image_url} alt="" className="h-full w-full object-cover" />
                   )}
                 </div>
                 <div className="min-w-0">
@@ -180,20 +221,17 @@ function MeusAnuncios() {
                       params={{ id: String(a.id) }}
                       className="truncate font-semibold text-foreground hover:text-primary"
                     >
-                      {a.titulo}
+                      {a.title}
                     </Link>
-                    {!a.ativo && <Badge variant="outline">Inativo</Badge>}
                   </div>
                   <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                    {a.categoria && <span>{a.categoria}</span>}
-                    {a.preco != null && (
-                      <span className="font-medium text-primary">{brl.format(a.preco)}</span>
-                    )}
+                    {a.category && <span>{a.category}</span>}
+                    {a.phone && <span>{a.phone}</span>}
                   </div>
                 </div>
               </div>
               <div className="flex gap-2">
-                <Button variant="ghost" size="icon">
+                <Button variant="ghost" size="icon" onClick={() => abrirEdicao(a)}>
                   <Edit className="h-4 w-4" />
                 </Button>
                 <Button

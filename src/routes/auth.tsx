@@ -49,7 +49,7 @@ function AuthPage() {
       password: senha,
       options: {
         emailRedirectTo: window.location.origin,
-        data: { nome },
+        data: { name: nome },
       },
     });
     setBusy(false);
