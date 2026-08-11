@@ -44,11 +44,13 @@ function ServiceDetailPage() {
   const [comentario, setComentario] = useState("");
 
   const { data, isLoading } = useQuery({
-    queryKey: ["service", servicoId],
+    queryKey: ["service", servicoId, user ? "auth" : "anon"],
     queryFn: async () => {
+      const publicCols =
+        "id, user_id, title, description, category, image_url, created_at";
       const { data: servico, error } = await supabase
         .from("services")
-        .select("*")
+        .select(user ? `${publicCols}, phone` : publicCols)
         .eq("id", servicoId)
         .maybeSingle();
       if (error) throw error;
