@@ -46,13 +46,16 @@ function ServiceDetailPage() {
   const { data, isLoading } = useQuery({
     queryKey: ["service", servicoId, user ? "auth" : "anon"],
     queryFn: async () => {
-      const publicCols =
-        "id, user_id, title, description, category, image_url, created_at";
-      const { data: servico, error } = await supabase
-        .from("services")
-        .select(user ? `${publicCols}, phone` : publicCols)
-        .eq("id", servicoId)
-        .maybeSingle();
+      const query = user
+        ? supabase
+            .from("services")
+            .select(
+              "id, user_id, title, description, category, image_url, created_at, phone",
+            )
+        : supabase
+            .from("services")
+            .select("id, user_id, title, description, category, image_url, created_at");
+      const { data: servico, error } = await query.eq("id", servicoId).maybeSingle();
       if (error) throw error;
       if (!servico) return null;
 
