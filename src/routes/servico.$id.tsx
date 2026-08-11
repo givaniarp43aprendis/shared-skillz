@@ -312,7 +312,18 @@ function ServiceDetailPage() {
               </div>
               <Separator className="my-4" />
               <div className="space-y-2">
-                {servico.phone ? (
+                {!user ? (
+                  <Button
+                    asChild
+                    className="w-full bg-gradient-hero text-white hover:opacity-90"
+                    size="lg"
+                  >
+                    <Link to="/auth">
+                      <Phone className="mr-2 h-4 w-4" />
+                      Entre para ver o telefone
+                    </Link>
+                  </Button>
+                ) : servico.phone ? (
                   <Button
                     asChild
                     className="w-full bg-gradient-hero text-white hover:opacity-90"
