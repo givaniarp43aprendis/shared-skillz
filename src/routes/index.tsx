@@ -36,7 +36,9 @@ export const Route = createFileRoute("/")({
 async function fetchServicos(): Promise<ServiceWithStats[]> {
   const { data, error } = await supabase
     .from("services")
-    .select("*, profiles(name, avatar_url, neighborhood), reviews(rating)")
+    .select(
+      "id, user_id, title, description, category, image_url, created_at, profiles(name, avatar_url, neighborhood), reviews(rating)",
+    )
     .order("created_at", { ascending: false })
     .limit(48);
   if (error) throw error;

@@ -44,13 +44,18 @@ function ServiceDetailPage() {
   const [comentario, setComentario] = useState("");
 
   const { data, isLoading } = useQuery({
-    queryKey: ["service", servicoId],
+    queryKey: ["service", servicoId, user ? "auth" : "anon"],
     queryFn: async () => {
-      const { data: servico, error } = await supabase
-        .from("services")
-        .select("*")
-        .eq("id", servicoId)
-        .maybeSingle();
+      const query = user
+        ? supabase
+            .from("services")
+            .select(
+              "id, user_id, title, description, category, image_url, created_at, phone",
+            )
+        : supabase
+            .from("services")
+            .select("id, user_id, title, description, category, image_url, created_at");
+      const { data: servico, error } = await query.eq("id", servicoId).maybeSingle();
       if (error) throw error;
       if (!servico) return null;
 
@@ -307,7 +312,18 @@ function ServiceDetailPage() {
               </div>
               <Separator className="my-4" />
               <div className="space-y-2">
-                {servico.phone ? (
+                {!user ? (
+                  <Button
+                    asChild
+                    className="w-full bg-gradient-hero text-white hover:opacity-90"
+                    size="lg"
+                  >
+                    <Link to="/auth">
+                      <Phone className="mr-2 h-4 w-4" />
+                      Entre para ver o telefone
+                    </Link>
+                  </Button>
+                ) : servico.phone ? (
                   <Button
                     asChild
                     className="w-full bg-gradient-hero text-white hover:opacity-90"
