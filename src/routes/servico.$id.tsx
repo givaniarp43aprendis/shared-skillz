@@ -11,7 +11,7 @@ import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { SiteHeader } from "@/components/site-header";
 import { StarRating } from "@/components/star-rating";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/integrations/supabase/external-client";
 import { useAuth } from "@/hooks/use-auth";
 import type { Profile, Review, ReviewWithAuthor, Service } from "@/lib/vi-types";
 import { toast } from "sonner";
