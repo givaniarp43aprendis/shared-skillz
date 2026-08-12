@@ -14,7 +14,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/integrations/supabase/external-client";
 import { useAuth } from "@/hooks/use-auth";
 import type { Service } from "@/lib/vi-types";
 import { toast } from "sonner";
