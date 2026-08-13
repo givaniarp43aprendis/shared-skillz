@@ -72,6 +72,28 @@ function MeuPerfil() {
       reader.readAsDataURL(file);
     });
 
+  const persistir = async (dados: {
+    name: string | null;
+    neighborhood: string | null;
+    avatar_url: string | null;
+  }) => {
+    if (!user) throw new Error("Não autenticado");
+    const { data, error } = await supabase
+      .from("profiles")
+      .upsert({ id: user.id, ...dados } as never, { onConflict: "id" })
+      .select("*")
+      .maybeSingle();
+    if (error) throw error;
+    if (!data) {
+      throw new Error(
+        "Não foi possível salvar o perfil (sem permissão para gravar). Saia e entre novamente.",
+      );
+    }
+    const perfilSalvo = data as unknown as Profile;
+    qc.setQueryData(["perfil", user.id], perfilSalvo);
+    return perfilSalvo;
+  };
+
   const trocarFoto = async (file: File) => {
     if (!user) return;
     if (!file.type.startsWith("image/")) {
@@ -98,15 +120,12 @@ function MeuPerfil() {
       }
 
       setForm((f) => ({ ...f, avatar_url: url }));
-      const { error } = await supabase.from("profiles").upsert({
-        id: user.id,
+      await persistir({
         name: form.name || null,
         neighborhood: form.neighborhood || null,
         avatar_url: url,
-      } as never);
-      if (error) throw error;
+      });
       toast.success("Foto atualizada!");
-      qc.invalidateQueries({ queryKey: ["perfil"] });
     } catch (e) {
       toast.error((e as Error).message);
     } finally {
@@ -115,22 +134,18 @@ function MeuPerfil() {
   };
 
   const salvar = useMutation({
-    mutationFn: async () => {
-      if (!user) throw new Error("Não autenticado");
-      const { error } = await supabase.from("profiles").upsert({
-        id: user.id,
+    mutationFn: async () =>
+      persistir({
         name: form.name || null,
         neighborhood: form.neighborhood || null,
         avatar_url: form.avatar_url || null,
-      } as never);
-      if (error) throw error;
-    },
+      }),
     onSuccess: () => {
       toast.success("Perfil salvo!");
-      qc.invalidateQueries({ queryKey: ["perfil"] });
     },
     onError: (e: Error) => toast.error(e.message),
   });
+
 
   return (
     <div>
