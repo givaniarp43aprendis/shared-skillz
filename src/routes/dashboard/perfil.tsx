@@ -46,6 +46,74 @@ function MeuPerfil() {
     }
   }, [perfil]);
 
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [enviandoFoto, setEnviandoFoto] = useState(false);
+
+  const redimensionar = (file: File) =>
+    new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onerror = () => reject(new Error("Não foi possível ler a imagem"));
+      reader.onload = () => {
+        const img = new Image();
+        img.onerror = () => reject(new Error("Imagem inválida"));
+        img.onload = () => {
+          const max = 256;
+          const escala = Math.min(1, max / Math.max(img.width, img.height));
+          const canvas = document.createElement("canvas");
+          canvas.width = Math.round(img.width * escala);
+          canvas.height = Math.round(img.height * escala);
+          const ctx = canvas.getContext("2d");
+          if (!ctx) return reject(new Error("Canvas indisponível"));
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+          resolve(canvas.toDataURL("image/jpeg", 0.85));
+        };
+        img.src = reader.result as string;
+      };
+      reader.readAsDataURL(file);
+    });
+
+  const trocarFoto = async (file: File) => {
+    if (!user) return;
+    if (!file.type.startsWith("image/")) {
+      toast.error("Selecione um arquivo de imagem.");
+      return;
+    }
+    setEnviandoFoto(true);
+    try {
+      const dataUrl = await redimensionar(file);
+      let url = dataUrl;
+
+      // Tenta guardar no Storage; se o bucket não existir, usa a imagem embutida.
+      try {
+        const caminho = `${user.id}/avatar-${Date.now()}.jpg`;
+        const blob = await (await fetch(dataUrl)).blob();
+        const { error } = await supabase.storage
+          .from("avatars")
+          .upload(caminho, blob, { upsert: true, contentType: "image/jpeg" });
+        if (!error) {
+          url = supabase.storage.from("avatars").getPublicUrl(caminho).data.publicUrl;
+        }
+      } catch {
+        /* mantém o data URL */
+      }
+
+      setForm((f) => ({ ...f, avatar_url: url }));
+      const { error } = await supabase.from("profiles").upsert({
+        id: user.id,
+        name: form.name || null,
+        neighborhood: form.neighborhood || null,
+        avatar_url: url,
+      } as never);
+      if (error) throw error;
+      toast.success("Foto atualizada!");
+      qc.invalidateQueries({ queryKey: ["perfil"] });
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setEnviandoFoto(false);
+    }
+  };
+
   const salvar = useMutation({
     mutationFn: async () => {
       if (!user) throw new Error("Não autenticado");
