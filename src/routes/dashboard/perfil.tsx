@@ -225,15 +225,6 @@ function MeuPerfil() {
               placeholder="Ex: Vila Madalena"
             />
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="avatar">URL da foto</Label>
-            <Input
-              id="avatar"
-              value={form.avatar_url}
-              onChange={(e) => setForm({ ...form, avatar_url: e.target.value })}
-              placeholder="https://..."
-            />
-          </div>
           <Button
             type="submit"
             disabled={salvar.isPending}
