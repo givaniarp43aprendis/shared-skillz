@@ -143,12 +143,40 @@ function MeuPerfil() {
 
       <Card className="max-w-xl p-6 shadow-card">
         <div className="mb-6 flex items-center gap-4">
-          <Avatar className="h-16 w-16">
-            <AvatarImage src={form.avatar_url || undefined} />
-            <AvatarFallback className="bg-primary/10 text-primary">
-              {(form.name || user?.email || "?").slice(0, 2).toUpperCase()}
-            </AvatarFallback>
-          </Avatar>
+          <button
+            type="button"
+            onClick={() => fileRef.current?.click()}
+            disabled={enviandoFoto}
+            aria-label="Alterar foto de perfil"
+            title="Alterar foto de perfil"
+            className="group relative rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            <Avatar className="h-16 w-16">
+              <AvatarImage src={form.avatar_url || undefined} />
+              <AvatarFallback className="bg-primary/10 text-primary">
+                {(form.name || user?.email || "?").slice(0, 2).toUpperCase()}
+              </AvatarFallback>
+            </Avatar>
+            <span className="absolute inset-0 flex items-center justify-center rounded-full bg-foreground/50 text-background opacity-0 transition-opacity group-hover:opacity-100">
+              <Camera className="h-5 w-5" />
+            </span>
+            {enviandoFoto && (
+              <span className="absolute inset-0 flex items-center justify-center rounded-full bg-foreground/60 text-[10px] font-medium text-background">
+                ...
+              </span>
+            )}
+          </button>
+          <input
+            ref={fileRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              e.target.value = "";
+              if (file) void trocarFoto(file);
+            }}
+          />
           <div className="min-w-0">
             <div className="truncate font-semibold text-foreground">
               {form.name || "Sem nome"}
