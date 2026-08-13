@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { Camera } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -45,6 +46,74 @@ function MeuPerfil() {
     }
   }, [perfil]);
 
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [enviandoFoto, setEnviandoFoto] = useState(false);
+
+  const redimensionar = (file: File) =>
+    new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onerror = () => reject(new Error("Não foi possível ler a imagem"));
+      reader.onload = () => {
+        const img = new Image();
+        img.onerror = () => reject(new Error("Imagem inválida"));
+        img.onload = () => {
+          const max = 256;
+          const escala = Math.min(1, max / Math.max(img.width, img.height));
+          const canvas = document.createElement("canvas");
+          canvas.width = Math.round(img.width * escala);
+          canvas.height = Math.round(img.height * escala);
+          const ctx = canvas.getContext("2d");
+          if (!ctx) return reject(new Error("Canvas indisponível"));
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+          resolve(canvas.toDataURL("image/jpeg", 0.85));
+        };
+        img.src = reader.result as string;
+      };
+      reader.readAsDataURL(file);
+    });
+
+  const trocarFoto = async (file: File) => {
+    if (!user) return;
+    if (!file.type.startsWith("image/")) {
+      toast.error("Selecione um arquivo de imagem.");
+      return;
+    }
+    setEnviandoFoto(true);
+    try {
+      const dataUrl = await redimensionar(file);
+      let url = dataUrl;
+
+      // Tenta guardar no Storage; se o bucket não existir, usa a imagem embutida.
+      try {
+        const caminho = `${user.id}/avatar-${Date.now()}.jpg`;
+        const blob = await (await fetch(dataUrl)).blob();
+        const { error } = await supabase.storage
+          .from("avatars")
+          .upload(caminho, blob, { upsert: true, contentType: "image/jpeg" });
+        if (!error) {
+          url = supabase.storage.from("avatars").getPublicUrl(caminho).data.publicUrl;
+        }
+      } catch {
+        /* mantém o data URL */
+      }
+
+      setForm((f) => ({ ...f, avatar_url: url }));
+      const { error } = await supabase.from("profiles").upsert({
+        id: user.id,
+        name: form.name || null,
+        neighborhood: form.neighborhood || null,
+        avatar_url: url,
+      } as never);
+      if (error) throw error;
+      toast.success("Foto atualizada!");
+      qc.invalidateQueries({ queryKey: ["perfil"] });
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setEnviandoFoto(false);
+    }
+  };
+
   const salvar = useMutation({
     mutationFn: async () => {
       if (!user) throw new Error("Não autenticado");
@@ -74,12 +143,40 @@ function MeuPerfil() {
 
       <Card className="max-w-xl p-6 shadow-card">
         <div className="mb-6 flex items-center gap-4">
-          <Avatar className="h-16 w-16">
-            <AvatarImage src={form.avatar_url || undefined} />
-            <AvatarFallback className="bg-primary/10 text-primary">
-              {(form.name || user?.email || "?").slice(0, 2).toUpperCase()}
-            </AvatarFallback>
-          </Avatar>
+          <button
+            type="button"
+            onClick={() => fileRef.current?.click()}
+            disabled={enviandoFoto}
+            aria-label="Alterar foto de perfil"
+            title="Alterar foto de perfil"
+            className="group relative rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            <Avatar className="h-16 w-16">
+              <AvatarImage src={form.avatar_url || undefined} />
+              <AvatarFallback className="bg-primary/10 text-primary">
+                {(form.name || user?.email || "?").slice(0, 2).toUpperCase()}
+              </AvatarFallback>
+            </Avatar>
+            <span className="absolute inset-0 flex items-center justify-center rounded-full bg-foreground/50 text-background opacity-0 transition-opacity group-hover:opacity-100">
+              <Camera className="h-5 w-5" />
+            </span>
+            {enviandoFoto && (
+              <span className="absolute inset-0 flex items-center justify-center rounded-full bg-foreground/60 text-[10px] font-medium text-background">
+                ...
+              </span>
+            )}
+          </button>
+          <input
+            ref={fileRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              e.target.value = "";
+              if (file) void trocarFoto(file);
+            }}
+          />
           <div className="min-w-0">
             <div className="truncate font-semibold text-foreground">
               {form.name || "Sem nome"}

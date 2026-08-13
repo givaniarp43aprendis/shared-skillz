@@ -54,7 +54,17 @@ function HomePage() {
     queryFn: fetchServicos,
   });
 
-  const filtrados = (servicos ?? []).filter((s) => {
+  const vistos = new Set<string>();
+  const unicos = (servicos ?? []).filter((s) => {
+    const chaveId = `id:${s.id}`;
+    const chaveImg = s.image_url ? `img:${s.image_url}` : null;
+    if (vistos.has(chaveId) || (chaveImg && vistos.has(chaveImg))) return false;
+    vistos.add(chaveId);
+    if (chaveImg) vistos.add(chaveImg);
+    return true;
+  });
+
+  const filtrados = unicos.filter((s) => {
     const okBusca = busca
       ? s.title.toLowerCase().includes(busca.toLowerCase()) ||
         (s.category ?? "").toLowerCase().includes(busca.toLowerCase())
@@ -125,7 +135,7 @@ function HomePage() {
       </section>
 
       {/* Grid */}
-      <section className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
+      <section id="servicos" className="mx-auto max-w-7xl scroll-mt-20 px-4 py-12 sm:px-6 lg:px-8">
         <div className="mb-6 flex items-end justify-between">
           <div>
             <h2 className="text-2xl font-bold text-foreground">Destaques da vizinhança</h2>

@@ -40,6 +40,15 @@ export function SiteHeader() {
         <nav className="hidden items-center gap-1 md:flex">
           <Link
             to="/"
+            hash="servicos"
+            onClick={(e) => {
+              const alvo =
+                typeof document !== "undefined" ? document.getElementById("servicos") : null;
+              if (alvo) {
+                e.preventDefault();
+                alvo.scrollIntoView({ behavior: "smooth", block: "start" });
+              }
+            }}
             className="rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
           >
             Explorar
