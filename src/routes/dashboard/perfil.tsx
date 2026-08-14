@@ -140,12 +140,15 @@ function MeuPerfil() {
   };
 
   const salvar = useMutation({
-    mutationFn: async () =>
-      persistir({
+    mutationFn: async () => {
+      // Nunca grava base64 na coluna avatar_url — apenas URLs reais.
+      const foto = form.avatar_url?.startsWith("data:") ? null : form.avatar_url || null;
+      return persistir({
         name: form.name || null,
         neighborhood: form.neighborhood || null,
-        avatar_url: form.avatar_url || null,
-      }),
+        avatar_url: foto,
+      });
+    },
     onSuccess: () => {
       toast.success("Perfil salvo!");
     },
