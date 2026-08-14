@@ -77,22 +77,48 @@ function MeuPerfil() {
     neighborhood: string | null;
     avatar_url: string | null;
   }) => {
-    if (!user) throw new Error("Não autenticado");
-    const { data, error } = await supabase
+    // Garante sessão válida (auth.uid() precisa existir para o RLS)
+    const { data: sessao } = await supabase.auth.getSession();
+    const uid = sessao.session?.user?.id ?? user?.id;
+    if (!uid) throw new Error("Você não está autenticado. Entre novamente para salvar.");
+
+    // 1) Tenta UPDATE na linha do usuário logado
+    const { data: atualizado, error: erroUpdate } = await supabase
       .from("profiles")
-      .upsert({ id: user.id, ...dados } as never, { onConflict: "id" })
+      .update(dados as never)
+      .eq("id", uid)
       .select("*")
       .maybeSingle();
-    if (error) throw error;
-    if (!data) {
+
+    if (erroUpdate) {
+      throw new Error(`Não foi possível salvar o perfil: ${erroUpdate.message}`);
+    }
+
+    let perfilSalvo = atualizado as unknown as Profile | null;
+
+    // 2) Se ainda não existe linha, cria
+    if (!perfilSalvo) {
+      const { data: criado, error: erroInsert } = await supabase
+        .from("profiles")
+        .insert({ id: uid, ...dados } as never)
+        .select("*")
+        .maybeSingle();
+      if (erroInsert) {
+        throw new Error(`Não foi possível criar o perfil: ${erroInsert.message}`);
+      }
+      perfilSalvo = criado as unknown as Profile | null;
+    }
+
+    if (!perfilSalvo) {
       throw new Error(
-        "Não foi possível salvar o perfil (sem permissão para gravar). Saia e entre novamente.",
+        "O banco não retornou o perfil salvo. Verifique as políticas de acesso (RLS) da tabela profiles.",
       );
     }
-    const perfilSalvo = data as unknown as Profile;
-    qc.setQueryData(["perfil", user.id], perfilSalvo);
+
+    qc.setQueryData(["perfil", uid], perfilSalvo);
     return perfilSalvo;
   };
+
 
   const trocarFoto = async (file: File) => {
     if (!user) return;
