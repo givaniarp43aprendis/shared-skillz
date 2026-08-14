@@ -63,15 +63,7 @@ function HomePage() {
     queryFn: fetchServicos,
   });
 
-  const vistos = new Set<string>();
-  const unicos = (servicos ?? []).filter((s) => {
-    const chaveId = `id:${s.id}`;
-    const chaveImg = s.image_url ? `img:${s.image_url}` : null;
-    if (vistos.has(chaveId) || (chaveImg && vistos.has(chaveImg))) return false;
-    vistos.add(chaveId);
-    if (chaveImg) vistos.add(chaveImg);
-    return true;
-  });
+  const unicos = Array.from(new Map((servicos ?? []).map((s) => [s.id, s])).values());
 
   const filtrados = unicos.filter((s) => {
     const okBusca = busca
