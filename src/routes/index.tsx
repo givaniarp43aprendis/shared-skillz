@@ -39,10 +39,19 @@ async function fetchServicos(): Promise<ServiceWithStats[]> {
     .select(
       "id, user_id, title, description, category, image_url, created_at, profiles(name, avatar_url, neighborhood), reviews(rating)",
     )
-    .order("created_at", { ascending: false })
-    .limit(48);
+    .order("created_at", { ascending: false });
   if (error) throw error;
-  return ((data ?? []) as unknown as ServiceRow[]).map(toServiceWithStats);
+
+  // Deduplica: mantém apenas o registro mais recente quando título, categoria e prestador forem iguais.
+  const vistos = new Map<string, ServiceRow>();
+  for (const row of (data ?? []) as unknown as ServiceRow[]) {
+    const chave = `${row.user_id}::${row.title.toLowerCase().trim()}::${(row.category ?? "").toLowerCase().trim()}`;
+    if (!vistos.has(chave)) {
+      vistos.set(chave, row);
+    }
+  }
+
+  return Array.from(vistos.values()).map(toServiceWithStats);
 }
 
 function HomePage() {
