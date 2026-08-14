@@ -102,24 +102,30 @@ function MeuPerfil() {
     }
     setEnviandoFoto(true);
     try {
+      // 1) Redimensiona e converte para JPEG
       const dataUrl = await redimensionar(file);
-      let url = dataUrl;
+      const blob = await (await fetch(dataUrl)).blob();
 
-      // Tenta guardar no Storage; se o bucket não existir, usa a imagem embutida.
-      try {
-        const caminho = `${user.id}/avatar-${Date.now()}.jpg`;
-        const blob = await (await fetch(dataUrl)).blob();
-        const { error } = await supabase.storage
-          .from("avatars")
-          .upload(caminho, blob, { upsert: true, contentType: "image/jpeg" });
-        if (!error) {
-          url = supabase.storage.from("avatars").getPublicUrl(caminho).data.publicUrl;
-        }
-      } catch {
-        /* mantém o data URL */
+      // 2) Faz o upload real para o Storage (bucket "avatars")
+      const caminho = `${user.id}/avatar-${Date.now()}.jpg`;
+      const { error: erroUpload } = await supabase.storage
+        .from("avatars")
+        .upload(caminho, blob, { upsert: true, contentType: "image/jpeg" });
+      if (erroUpload) {
+        throw new Error(
+          `Falha no upload da foto: ${erroUpload.message}. Verifique se o bucket público "avatars" existe no seu Supabase.`,
+        );
+      }
+
+      // 3) Usa a URL pública real
+      const url = supabase.storage.from("avatars").getPublicUrl(caminho).data.publicUrl;
+      if (!url || url.startsWith("data:")) {
+        throw new Error("Não foi possível obter a URL pública da imagem.");
       }
 
       setForm((f) => ({ ...f, avatar_url: url }));
+
+      // 4) Salva a URL na tabela profiles
       await persistir({
         name: form.name || null,
         neighborhood: form.neighborhood || null,
@@ -134,12 +140,15 @@ function MeuPerfil() {
   };
 
   const salvar = useMutation({
-    mutationFn: async () =>
-      persistir({
+    mutationFn: async () => {
+      // Nunca grava base64 na coluna avatar_url — apenas URLs reais.
+      const foto = form.avatar_url?.startsWith("data:") ? null : form.avatar_url || null;
+      return persistir({
         name: form.name || null,
         neighborhood: form.neighborhood || null,
-        avatar_url: form.avatar_url || null,
-      }),
+        avatar_url: foto,
+      });
+    },
     onSuccess: () => {
       toast.success("Perfil salvo!");
     },
